@@ -7,6 +7,8 @@ public class ModConfig {
 
 	public static final Map<String, Boolean> toggles = new LinkedHashMap<>();
 	public static Long manualSeed = null;
+	public static int armorHudX = 10;
+	public static int armorHudY = 60;
 
 	static {
 		toggles.put("cps", true);
@@ -16,6 +18,7 @@ public class ModConfig {
 		toggles.put("reach_indicator", true);
 		toggles.put("slime_chunks", true);
 		toggles.put("no_fade", true);
+		toggles.put("own_nametag", true);
 	}
 
 	public static boolean isOn(String key) {

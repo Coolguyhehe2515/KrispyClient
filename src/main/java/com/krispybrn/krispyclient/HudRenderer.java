@@ -2,8 +2,6 @@ package com.krispybrn.krispyclient;
 
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.entity.EquipmentSlot;
-import net.minecraft.item.ItemStack;
 
 public class HudRenderer {
 
@@ -33,18 +31,7 @@ public class HudRenderer {
 		}
 
 		if (ModConfig.isOn("armor_status")) {
-			for (EquipmentSlot slot : new EquipmentSlot[]{
-				EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET
-			}) {
-				ItemStack stack = client.player.getEquippedStack(slot);
-				if (!stack.isEmpty() && stack.isDamageable()) {
-					int durability = stack.getMaxDamage() - stack.getDamage();
-					context.drawText(client.textRenderer,
-						slot.getName() + ": " + durability + "/" + stack.getMaxDamage(),
-						x, y, color, true);
-					y += 10;
-				}
-			}
+			ArmorHudRenderer.render(context, client, ModConfig.armorHudX, ModConfig.armorHudY);
 		}
 	}
 }

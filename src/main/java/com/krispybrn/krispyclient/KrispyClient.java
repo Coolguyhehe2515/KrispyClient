@@ -28,6 +28,19 @@ public class KrispyClient implements ClientModInitializer {
 		ReachIndicator.register();
 		SlimeChunkRenderer.register();
 
+		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback.EVENT.register((entityType, entityRenderer, registrationHelper, context) -> {
+			if (entityRenderer instanceof net.minecraft.client.render.entity.PlayerEntityRenderer) {
+				registrationHelper.register(new CapeFeatureRenderer(
+					(net.minecraft.client.render.entity.feature.FeatureRendererContext<
+						net.minecraft.client.network.AbstractClientPlayerEntity,
+						net.minecraft.client.render.entity.model.PlayerEntityModel<net.minecraft.client.network.AbstractClientPlayerEntity>>) entityRenderer));
+				registrationHelper.register(new NametagFeatureRenderer(
+					(net.minecraft.client.render.entity.feature.FeatureRendererContext<
+						net.minecraft.client.network.AbstractClientPlayerEntity,
+						net.minecraft.client.render.entity.model.PlayerEntityModel<net.minecraft.client.network.AbstractClientPlayerEntity>>) entityRenderer));
+			}
+		});
+
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (openMenuKey.wasPressed()) {
 				if (client.currentScreen == null) {
