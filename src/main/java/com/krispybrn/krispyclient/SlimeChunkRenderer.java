@@ -27,11 +27,8 @@ public class SlimeChunkRenderer {
 		PlayerEntity player = client.player;
 		if (player == null || client.world == null) return;
 
-		long seed = client.world.getSeed();
-		if (seed == 0L) {
-			if (ModConfig.manualSeed == null) return;
-			seed = ModConfig.manualSeed;
-		}
+		if (ModConfig.manualSeed == null) return;
+		long seed = ModConfig.manualSeed;
 
 		MatrixStack matrices = context.matrixStack();
 		Vec3d camPos = context.camera().getPos();
