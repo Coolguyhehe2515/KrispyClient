@@ -78,7 +78,7 @@ public class ModMenuScreen extends Screen {
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		renderBackground(context, mouseX, mouseY, delta);
+		renderBackground(context);
 		context.drawCenteredTextWithShadow(textRenderer, "Krispy Client", width / 2, 20, 0xFFFFFF);
 		super.render(context, mouseX, mouseY, delta);
 	}
