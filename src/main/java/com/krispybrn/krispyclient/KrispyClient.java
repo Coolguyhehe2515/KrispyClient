@@ -1,6 +1,8 @@
 package com.krispybrn.krispyclient;
 
+import com.krispybrn.krispyclient.gui.ModMenuScreen;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -10,25 +12,33 @@ import org.lwjgl.glfw.GLFW;
 
 public class KrispyClient implements ClientModInitializer {
 
-	public static KeyBinding toggleHudKey;
+	public static KeyBinding openMenuKey;
 	public static boolean hudEnabled = true;
 
 	@Override
 	public void onInitializeClient() {
-		toggleHudKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-			"key.krispyclient.togglehud",
+		openMenuKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+			"key.krispyclient.openmenu",
 			InputUtil.Type.KEYSYM,
 			GLFW.GLFW_KEY_RIGHT_SHIFT,
 			"category.krispyclient"
 		));
 
 		CpsTracker.register();
+		ReachIndicator.register();
+		SlimeChunkRenderer.register();
+
+		ClientTickEvents.END_CLIENT_TICK.register(client -> {
+			while (openMenuKey.wasPressed()) {
+				if (client.currentScreen == null) {
+					client.setScreen(new ModMenuScreen());
+				}
+			}
+		});
+
 		HudRenderCallback.EVENT.register((context, tickDelta) -> {
 			MinecraftClient client = MinecraftClient.getInstance();
-			while (toggleHudKey.wasPressed()) {
-				hudEnabled = !hudEnabled;
-			}
-			if (hudEnabled && client.player != null) {
+			if (client.player != null) {
 				HudRenderer.render(context, client);
 			}
 		});
