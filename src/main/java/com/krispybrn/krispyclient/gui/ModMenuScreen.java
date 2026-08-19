@@ -3,14 +3,23 @@ package com.krispybrn.krispyclient.gui;
 import com.krispybrn.krispyclient.ModConfig;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class ModMenuScreen extends Screen {
+
+	private static final Identifier CARD_OFF = Identifier.of("krispyclient", "textures/gui/card_off.png");
+	private static final Identifier CARD_ON = Identifier.of("krispyclient", "textures/gui/card_on.png");
+	private static final Identifier CARD_HOVER = Identifier.of("krispyclient", "textures/gui/card_hover.png");
+	private static final Identifier BTN = Identifier.of("krispyclient", "textures/gui/button_small.png");
+	private static final Identifier BTN_HOVER = Identifier.of("krispyclient", "textures/gui/button_small_hover.png");
+	private static final Identifier AURORA = Identifier.of("krispyclient", "textures/gui/aurora_band.png");
 
 	private static final Map<String, String> LABELS = new LinkedHashMap<>();
 	static {
@@ -21,9 +30,31 @@ public class ModMenuScreen extends Screen {
 		LABELS.put("reach_indicator", "Reach Indicator");
 		LABELS.put("slime_chunks", "Slime Chunks");
 		LABELS.put("no_fade", "No Fade");
+		LABELS.put("own_nametag", "F5 Nametag");
 	}
 
+	private static class Card {
+		int x, y, w, h;
+		String key;
+		Runnable action;
+	}
+
+	private static class SmallButton {
+		int x, y, w, h;
+		String label;
+		Runnable action;
+	}
+
+	private final List<Card> cards = new ArrayList<>();
+	private final List<SmallButton> buttons = new ArrayList<>();
 	private TextFieldWidget seedField;
+
+	private final int cols = 3;
+	private final int cardW = 150;
+	private final int cardH = 60;
+	private final int gap = 10;
+	private int startX;
+	private int startY;
 
 	public ModMenuScreen() {
 		super(Text.literal("Krispy Client"));
@@ -31,56 +62,128 @@ public class ModMenuScreen extends Screen {
 
 	@Override
 	protected void init() {
-		int cols = 3;
-		int cardW = 150;
-		int cardH = 60;
-		int gap = 10;
-		int startX = (width - (cols * cardW + (cols - 1) * gap)) / 2;
-		int startY = 70;
+		cards.clear();
+		buttons.clear();
+
+		startX = (width - (cols * cardW + (cols - 1) * gap)) / 2;
+		startY = 70;
 
 		int i = 0;
 		for (String key : LABELS.keySet()) {
 			int col = i % cols;
 			int row = i / cols;
-			int x = startX + col * (cardW + gap);
-			int y = startY + row * (cardH + gap);
-
-			addDrawableChild(ButtonWidget.builder(labelFor(key), btn -> {
-				ModConfig.toggle(key);
-				btn.setMessage(labelFor(key));
-			}).dimensions(x, y + cardH - 24, cardW - 16, 20).build());
-
+			Card card = new Card();
+			card.x = startX + col * (cardW + gap);
+			card.y = startY + row * (cardH + gap);
+			card.w = cardW;
+			card.h = cardH;
+			card.key = key;
+			cards.add(card);
 			i++;
 		}
 
 		int rows = (int) Math.ceil(LABELS.size() / (double) cols);
-		int seedY = startY + rows * (cardH + gap) + 20;
+		int rowBelow = startY + rows * (cardH + gap) + 20;
 
-		addDrawableChild(new ButtonWidget.Builder(Text.literal("Set World Seed"), btn -> {
-			try {
-				ModConfig.manualSeed = Long.parseLong(seedField.getText().trim());
-			} catch (NumberFormatException ignored) {
-			}
-		}).dimensions(startX + cols * cardW + (cols - 1) * gap - 140, seedY, 140, 20).build());
+		SmallButton capes = new SmallButton();
+		capes.x = startX;
+		capes.y = rowBelow + 30;
+		capes.w = 140;
+		capes.h = 24;
+		capes.label = "Capes";
+		capes.action = () -> { if (client != null) client.setScreen(new CapeMenuScreen(this)); };
+		buttons.add(capes);
 
-		seedField = new TextFieldWidget(textRenderer, startX, seedY, 200, 20, Text.literal("World Seed"));
+		SmallButton moveHud = new SmallButton();
+		moveHud.x = startX + 150;
+		moveHud.y = rowBelow + 30;
+		moveHud.w = 140;
+		moveHud.h = 24;
+		moveHud.label = "Move Armor HUD";
+		moveHud.action = () -> { if (client != null) client.setScreen(new HudEditScreen()); };
+		buttons.add(moveHud);
+
+		seedField = new TextFieldWidget(textRenderer, startX, rowBelow, 200, 20, Text.literal("World Seed"));
 		seedField.setPlaceholder(Text.literal("Manual seed override"));
 		if (ModConfig.manualSeed != null) {
 			seedField.setText(String.valueOf(ModConfig.manualSeed));
 		}
 		addDrawableChild(seedField);
-	}
 
-	private Text labelFor(String key) {
-		String state = ModConfig.isOn(key) ? "ON" : "OFF";
-		return Text.literal(LABELS.get(key) + ": " + state);
+		SmallButton setSeed = new SmallButton();
+		setSeed.x = startX + 210;
+		setSeed.y = rowBelow;
+		setSeed.w = 140;
+		setSeed.h = 20;
+		setSeed.label = "Set World Seed";
+		setSeed.action = () -> {
+			try {
+				ModConfig.manualSeed = Long.parseLong(seedField.getText().trim());
+			} catch (NumberFormatException ignored) {
+			}
+		};
+		buttons.add(setSeed);
 	}
 
 	@Override
 	public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-		renderBackground(context);
+		context.fillGradient(0, 0, width, height, 0xE60A0D12, 0xE60F131A);
+
+		long time = System.currentTimeMillis();
+		float phase = (time % 14000L) / 14000f;
+		float driftX = (float) Math.sin(phase * Math.PI * 2) * (width * 0.04f);
+		float driftY = (float) Math.sin(phase * Math.PI * 2 + 1.5f) * 6f;
+		context.drawTexture(AURORA, (int) driftX, (int) driftY, 0, 0, width, 90, 512, 140);
+
 		context.drawCenteredTextWithShadow(textRenderer, "Krispy Client", width / 2, 20, 0xFFFFFF);
+
+		for (Card card : cards) {
+			boolean on = ModConfig.isOn(card.key);
+			boolean hovered = mouseX >= card.x && mouseX <= card.x + card.w
+				&& mouseY >= card.y && mouseY <= card.y + card.h;
+
+			Identifier tex = hovered ? CARD_HOVER : (on ? CARD_ON : CARD_OFF);
+			context.drawTexture(tex, card.x, card.y, 0, 0, card.w, card.h, card.w, card.h);
+
+			String label = LABELS.get(card.key);
+			int labelW = textRenderer.getWidth(label);
+			context.drawText(textRenderer, label, card.x + (card.w - labelW) / 2, card.y + 14, 0xFFFFFF, true);
+
+			String state = on ? "ON" : "OFF";
+			int stateColor = on ? 0x34D399 : 0x8A8F98;
+			int stateW = textRenderer.getWidth(state);
+			context.drawText(textRenderer, state, card.x + (card.w - stateW) / 2, card.y + 34, stateColor, true);
+		}
+
+		for (SmallButton btn : buttons) {
+			boolean hovered = mouseX >= btn.x && mouseX <= btn.x + btn.w
+				&& mouseY >= btn.y && mouseY <= btn.y + btn.h;
+			Identifier tex = hovered ? BTN_HOVER : BTN;
+			context.drawTexture(tex, btn.x, btn.y, 0, 0, btn.w, btn.h, btn.w, btn.h);
+			int labelW = textRenderer.getWidth(btn.label);
+			context.drawText(textRenderer, btn.label, btn.x + (btn.w - labelW) / 2, btn.y + (btn.h - 8) / 2, 0xFFFFFF, true);
+		}
+
 		super.render(context, mouseX, mouseY, delta);
+	}
+
+	@Override
+	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		for (Card card : cards) {
+			if (mouseX >= card.x && mouseX <= card.x + card.w
+				&& mouseY >= card.y && mouseY <= card.y + card.h) {
+				ModConfig.toggle(card.key);
+				return true;
+			}
+		}
+		for (SmallButton btn : buttons) {
+			if (mouseX >= btn.x && mouseX <= btn.x + btn.w
+				&& mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+				btn.action.run();
+				return true;
+			}
+		}
+		return super.mouseClicked(mouseX, mouseY, button);
 	}
 
 	@Override
