@@ -13,7 +13,7 @@ import net.minecraft.client.render.entity.feature.FeatureRenderer;
 import net.minecraft.client.render.entity.feature.FeatureRendererContext;
 import net.minecraft.client.render.entity.model.PlayerEntityModel;
 import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.util.PlayerModelPart;
+import net.minecraft.client.render.entity.PlayerModelPart;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.math.MathHelper;
