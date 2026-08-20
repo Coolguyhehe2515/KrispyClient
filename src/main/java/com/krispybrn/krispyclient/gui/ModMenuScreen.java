@@ -31,12 +31,12 @@ public class ModMenuScreen extends Screen {
 		LABELS.put("slime_chunks", "Slime Chunks");
 		LABELS.put("no_fade", "No Fade");
 		LABELS.put("own_nametag", "F5 Nametag");
+		LABELS.put("tnt_timer", "TNT Timer");
 	}
 
 	private static class Card {
 		int x, y, w, h;
 		String key;
-		Runnable action;
 	}
 
 	private static class SmallButton {
@@ -56,6 +56,12 @@ public class ModMenuScreen extends Screen {
 	private int startX;
 	private int startY;
 
+	private final int contentTop = 55;
+	private final int bottomMargin = 12;
+	private int seedFieldBaseY;
+	private double scrollAmount = 0;
+	private int maxScroll = 0;
+
 	public ModMenuScreen() {
 		super(Text.literal("Krispy Client"));
 	}
@@ -64,6 +70,7 @@ public class ModMenuScreen extends Screen {
 	protected void init() {
 		cards.clear();
 		buttons.clear();
+		scrollAmount = 0;
 
 		startX = (width - (cols * cardW + (cols - 1) * gap)) / 2;
 		startY = 70;
@@ -103,7 +110,8 @@ public class ModMenuScreen extends Screen {
 		moveHud.action = () -> { if (client != null) client.setScreen(new HudEditScreen()); };
 		buttons.add(moveHud);
 
-		seedField = new TextFieldWidget(textRenderer, startX, rowBelow, 200, 20, Text.literal("World Seed"));
+		seedFieldBaseY = rowBelow;
+		seedField = new TextFieldWidget(textRenderer, startX, seedFieldBaseY, 200, 20, Text.literal("World Seed"));
 		seedField.setPlaceholder(Text.literal("Manual seed override"));
 		if (ModConfig.manualSeed != null) {
 			seedField.setText(String.valueOf(ModConfig.manualSeed));
@@ -123,6 +131,19 @@ public class ModMenuScreen extends Screen {
 			}
 		};
 		buttons.add(setSeed);
+
+		int contentBottom = rowBelow + 30 + 24 + bottomMargin;
+		int viewportHeight = (height - bottomMargin) - contentTop;
+		maxScroll = Math.max(0, contentBottom - contentTop - viewportHeight);
+	}
+
+	private int viewportBottom() {
+		return height - bottomMargin;
+	}
+
+	private void applyScroll(double amount) {
+		scrollAmount = Math.max(0, Math.min(maxScroll, scrollAmount + amount));
+		seedField.setY(seedFieldBaseY - (int) scrollAmount);
 	}
 
 	@Override
@@ -137,10 +158,17 @@ public class ModMenuScreen extends Screen {
 
 		context.drawCenteredTextWithShadow(textRenderer, "Krispy Client", width / 2, 20, 0xFFFFFF);
 
+		int viewBottom = viewportBottom();
+		context.enableScissor(0, contentTop, width, viewBottom);
+		context.getMatrices().push();
+		context.getMatrices().translate(0, -scrollAmount, 0);
+
 		for (Card card : cards) {
 			boolean on = ModConfig.isOn(card.key);
+			double screenY = card.y - scrollAmount;
 			boolean hovered = mouseX >= card.x && mouseX <= card.x + card.w
-				&& mouseY >= card.y && mouseY <= card.y + card.h;
+				&& mouseY >= screenY && mouseY <= screenY + card.h
+				&& mouseY >= contentTop && mouseY <= viewBottom;
 
 			Identifier tex = hovered ? CARD_HOVER : (on ? CARD_ON : CARD_OFF);
 			context.drawTexture(tex, card.x, card.y, 0, 0, card.w, card.h, card.w, card.h);
@@ -156,8 +184,10 @@ public class ModMenuScreen extends Screen {
 		}
 
 		for (SmallButton btn : buttons) {
+			double screenY = btn.y - scrollAmount;
 			boolean hovered = mouseX >= btn.x && mouseX <= btn.x + btn.w
-				&& mouseY >= btn.y && mouseY <= btn.y + btn.h;
+				&& mouseY >= screenY && mouseY <= screenY + btn.h
+				&& mouseY >= contentTop && mouseY <= viewBottom;
 			Identifier tex = hovered ? BTN_HOVER : BTN;
 			context.drawTexture(tex, btn.x, btn.y, 0, 0, btn.w, btn.h, btn.w, btn.h);
 			int labelW = textRenderer.getWidth(btn.label);
@@ -165,20 +195,45 @@ public class ModMenuScreen extends Screen {
 		}
 
 		super.render(context, mouseX, mouseY, delta);
+
+		context.getMatrices().pop();
+		context.disableScissor();
+
+		if (maxScroll > 0) {
+			int trackX = width - 8;
+			int trackH = viewBottom - contentTop;
+			context.fill(trackX, contentTop, trackX + 4, viewBottom, 0x40FFFFFF);
+			int thumbH = Math.max(20, (int) (trackH * ((double) trackH / (trackH + maxScroll))));
+			int thumbY = contentTop + (int) ((trackH - thumbH) * (scrollAmount / maxScroll));
+			context.fill(trackX, thumbY, trackX + 4, thumbY + thumbH, 0xA0FFFFFF);
+		}
+	}
+
+	@Override
+	public boolean mouseScrolled(double mouseX, double mouseY, double amount) {
+		if (maxScroll > 0 && mouseY >= contentTop && mouseY <= viewportBottom()) {
+			applyScroll(-amount * 16);
+			return true;
+		}
+		return super.mouseScrolled(mouseX, mouseY, amount);
 	}
 
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
+		if (mouseY < contentTop || mouseY > viewportBottom()) {
+			return super.mouseClicked(mouseX, mouseY, button);
+		}
+		double adjY = mouseY + scrollAmount;
 		for (Card card : cards) {
 			if (mouseX >= card.x && mouseX <= card.x + card.w
-				&& mouseY >= card.y && mouseY <= card.y + card.h) {
+				&& adjY >= card.y && adjY <= card.y + card.h) {
 				ModConfig.toggle(card.key);
 				return true;
 			}
 		}
 		for (SmallButton btn : buttons) {
 			if (mouseX >= btn.x && mouseX <= btn.x + btn.w
-				&& mouseY >= btn.y && mouseY <= btn.y + btn.h) {
+				&& adjY >= btn.y && adjY <= btn.y + btn.h) {
 				btn.action.run();
 				return true;
 			}
