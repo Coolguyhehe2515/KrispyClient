@@ -27,6 +27,7 @@ public class KrispyClient implements ClientModInitializer {
 		CpsTracker.register();
 		ReachIndicator.register();
 		SlimeChunkRenderer.register();
+		TntTimerRenderer.register();
 
 		net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback.EVENT.register((entityType, entityRenderer, registrationHelper, context) -> {
 			if (entityRenderer instanceof net.minecraft.client.render.entity.PlayerEntityRenderer) {

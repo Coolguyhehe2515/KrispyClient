@@ -19,6 +19,7 @@ public class ModConfig {
 		toggles.put("slime_chunks", true);
 		toggles.put("no_fade", true);
 		toggles.put("own_nametag", true);
+		toggles.put("tnt_timer", true);
 	}
 
 	public static boolean isOn(String key) {
